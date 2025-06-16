@@ -36,7 +36,7 @@ add_custom_target(run_all
 foreach(OPT_LEVEL ${OPT_LEVELS})
     add_custom_command(TARGET run_all
         COMMAND ${CMAKE_COMMAND} -E echo "Running with -${OPT_LEVEL} optimization"
-        COMMAND ./sum_squares_${OPT_LEVEL}
+        COMMAND sum_squares_${OPT_LEVEL}
         COMMAND ${CMAKE_COMMAND} -E echo ""
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
