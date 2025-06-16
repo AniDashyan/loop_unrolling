@@ -8,7 +8,21 @@ set(OPT_LEVELS "O0" "O2" "O3")
 
 foreach(OPT_LEVEL ${OPT_LEVELS})
     add_executable(sum_squares_${OPT_LEVEL} main.cpp)
-    target_compile_options(sum_squares_${OPT_LEVEL} PRIVATE -${OPT_LEVEL} -g)
+    
+    if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        # MSVC-specific flags
+        if(OPT_LEVEL STREQUAL "O0")
+            target_compile_options(sum_squares_${OPT_LEVEL} PRIVATE /Od /Zi)
+        elseif(OPT_LEVEL STREQUAL "O2")
+            target_compile_options(sum_squares_${OPT_LEVEL} PRIVATE /O2 /Zi)
+        elseif(OPT_LEVEL STREQUAL "O3")
+            target_compile_options(sum_squares_${OPT_LEVEL} PRIVATE /Ox /Zi)
+        endif()
+    else()
+        # GCC/Clang-specific flags
+        target_compile_options(sum_squares_${OPT_LEVEL} PRIVATE -${OPT_LEVEL} -g)
+    endif()
+    
     set_target_properties(sum_squares_${OPT_LEVEL} PROPERTIES OUTPUT_NAME "sum_squares_${OPT_LEVEL}")
 endforeach()
 
