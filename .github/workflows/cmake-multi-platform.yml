@@ -1,0 +1,95 @@
+name: CMake on multiple platforms
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release]
+        c_compiler: [gcc, clang, cl]
+        include:
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+          - os: ubuntu-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+        exclude:
+          - os: windows-latest
+            c_compiler: gcc
+          - os: windows-latest
+            c_compiler: clang
+          - os: ubuntu-latest
+            c_compiler: cl
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set build output directory
+      id: strings
+      shell: bash
+      run: echo "build_output_dir=${{ github.workspace }}/build" >> $GITHUB_OUTPUT
+
+    - name: Configure CMake
+      run: >
+        cmake -B "${{ steps.strings.outputs.build_output_dir }}"
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -S "${{ github.workspace }}"
+
+    - name: Build
+      run: >
+        cmake --build "${{ steps.strings.outputs.build_output_dir }}"
+        --config ${{ matrix.build_type }}
+        --target run_all
+
+    - name: Test
+      working-directory: ${{ steps.strings.outputs.build_output_dir }}
+      run: ctest --build-config ${{ matrix.build_type }}
+
+    - name: Run Executables
+      shell: bash
+      run: |
+        os="${{ runner.os }}"
+        build_dir="${{ steps.strings.outputs.build_output_dir }}"
+        executables=("sum_squares_O0" "sum_squares_O2" "sum_squares_O3")
+
+        if [ "$os" = "Windows" ]; then
+          for exe in "${executables[@]}"; do
+            executable="$exe.exe"
+            executable_path="$build_dir/${{ matrix.build_type }}/$executable"
+            echo "Checking if executable exists: $executable_path"
+            if [ -f "$executable_path" ]; then
+              echo "Running executable: $executable"
+              "$executable_path" || echo "Program $executable encountered an issue (exit code ignored)"
+            else
+              echo "Executable not found: $executable_path"
+              exit 1
+            fi
+          done
+        else
+          for exe in "${executables[@]}"; do
+            executable_path="$build_dir/$exe"
+            echo "Checking if executable exists: $executable_path"
+            if [ -f "$executable_path" ]; then
+              echo "Running executable: $exe"
+              "$executable_path" || echo "Program $exe encountered an issue (exit code ignored)"
+            else
+              echo "Executable not found: $executable_path"
+              exit 1
+            fi
+          done
+        fi
